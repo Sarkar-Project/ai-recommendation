@@ -13,6 +13,21 @@ app.use(cors());
 // Parse JSON bodies
 app.use(express.json());
 
+/**
+ * Middleware to check for a valid API key in the request header.
+ * Clients must include the header "x-api-key" with the correct value.
+ */
+function checkApiKey(req, res, next) {
+  const apiKey = req.headers["x-api-key"];
+  if (apiKey && apiKey === process.env.CLIENT_API_KEY) {
+    return next();
+  }
+  return res.status(403).json({ error: "Forbidden: Invalid API key." });
+}
+
+// Apply the API key check to the /filter-songs endpoint
+app.use("/filter-songs", checkApiKey);
+
 // Initialize Gemini AI with your API key
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
