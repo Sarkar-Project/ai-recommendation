@@ -23,7 +23,7 @@ app.post("/filter-songs", async (req, res) => {
 
   // Generate song suggestions using Gemini AI
   try {
-    const model = genAI.getGenerativeModel({ model: "Gemini 2.0 Flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
     const prompt = `Suggest songs similar to the following: ${JSON.stringify(
       filteredSongs
     )}`;
