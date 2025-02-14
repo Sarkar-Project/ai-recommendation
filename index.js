@@ -24,9 +24,11 @@ app.post("/filter-songs", async (req, res) => {
   // Generate song suggestions using Gemini AI
   try {
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-    const prompt = `Suggest songs similar to the following: ${JSON.stringify(
-      filteredSongs
-    )}`;
+    const prompt = `
+Return your response as valid JSON. The JSON should have a key "suggestions" that contains an array of song suggestions. Each suggestion should be an object with keys "name", "artist", "reason".
+Suggest songs similar to these: ${JSON.stringify(filteredSongs)}
+`;
+
     const response = await model.generateContent(prompt);
     const suggestedSongs = response.response.text();
 
