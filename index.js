@@ -7,7 +7,7 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Enable CORS if you plan to call this from a different origin
+// Enable CORS for all origins (adjust as needed)
 app.use(cors());
 
 // Parse JSON bodies
@@ -28,56 +28,52 @@ function checkApiKey(req, res, next) {
 // Apply the API key check to the /filter-songs endpoint
 app.use("/filter-songs", checkApiKey);
 
-// Initialize Gemini AI with your API key
+// Initialize Gemini AI with your key
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-
-
+/**
+ * POST /filter-songs
+ * Expects: { songs: [ { title, album, artist, language, year }, ... ] }
+ * Returns: JSON containing filteredSongs and a parsed suggestedSongs JSON.
+ */
 app.post("/filter-songs", async (req, res) => {
   try {
-    // 1. Extract the array of songs from the request body
-    const SongsforAI = req.body.songs || [];
+    const songs = req.body.songs || [];
 
-    // 2. Create a prompt instructing Gemini to return valid JSON only
+    // Create a prompt instructing Gemini to output only valid JSON
     const prompt = `
-Return your output as valid JSON. The JSON should have a key "suggestions" that holds an array of objects. 
-Each object must have "name", "artist", and "reason" keys. Do not include markdown or triple backticks.
-Suggest songs similar to: ${JSON.stringify(SongsforAI)}
-`;
+Return your output as valid JSON. The JSON should have a key "suggestions" that holds an array of objects.
+Each object must have "name", "artist", and "reason" keys. Do not include any markdown or extra text.
+Suggest songs similar to: ${JSON.stringify(songs)}
+    `;
 
-    // 3. (Optional) Provide system instructions to further ensure JSON output
+    // Set up the model with a system instruction to enforce JSON output
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash", // or "Gemini 2.0 Flash"
+      model: "gemini-2.0-flash", // or "Gemini 2.0 Flash" if preferred
       systemInstruction: {
         role: "model",
         parts: [
           {
-            text: `
-You are an expert music recommender. 
-Only output valid JSON in your final response. 
-No markdown formatting or extra text.
-          `
+            text: "You are an expert music recommender. Only output valid JSON without markdown formatting or extra text."
           }
         ]
       }
     });
 
-    // 4. Call Gemini to generate content
+    // Generate content using Gemini
     const response = await model.generateContent(prompt);
-
-    // 5. Get the raw text. Sometimes Gemini might still add extra backticks or text
     let output = response.response.text();
 
-    // Strip out possible triple backticks or "```json"
+    // Remove possible markdown code fences (```json and ```)
     output = output.replace(/```json\s*|```/g, "");
 
-    // 6. Parse the JSON string
-    const parsedJSON = JSON.parse(output);
+    // Parse the cleaned output as JSON
+    const suggestions = JSON.parse(output);
 
-    // 7. Return a JSON response to the client
+    // Send the response back to the client
     res.json({
-      filteredSongs: SongsforAI,
-      suggestedSongs: parsedJSON
+      filteredSongs: songs,
+      suggestedSongs: suggestions
     });
   } catch (error) {
     console.error("Gemini API error:", error);
